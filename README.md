@@ -35,7 +35,7 @@ An interactive web application that visualizes Kubernetes cluster behavior in re
 - CPU load generation for HPA testing
 - Beautiful, responsive UI
 
-**Docker Hub:** `elizaldecruzm/nextjs-k8s-app:latest`
+**Docker Hub:** `elizaldecruzm/nextjs-k8s-workshop:latest`
 
 ## 🚀 Quick Start
 
