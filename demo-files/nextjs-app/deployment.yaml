@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: nextjs-app
-          image: yourusername/nextjs-k8s-app:latest
+          image: elizaldecruzm/nextjs-k8s-app:latest
           ports:
             - containerPort: 3000
           env:
