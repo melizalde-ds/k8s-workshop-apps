@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rust-ml-api
+  labels:
+    app: rust-ml-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rust-ml-api
+  template:
+    metadata:
+      labels:
+        app: rust-ml-api
+    spec:
+      containers:
+        - name: rust-ml-api
+          image: elizaldecruzm/rust-ml-inference-api:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rust-ml-api-service
+spec:
+  selector:
+    app: rust-ml-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP
