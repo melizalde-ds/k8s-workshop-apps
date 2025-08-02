@@ -4,11 +4,9 @@ This guide will help you deploy a Rust-based machine learning inference API to a
 
 ## Prerequisites
 
-```
 - [Docker](https://docs.docker.com/get-docker/) installed
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) installed
-```
 
 ## Quick Start
 
@@ -50,23 +48,20 @@ kubectl describe pods
 
 ### 5. Access the application
 
-Since we're using Minikube, expose the service:
+Get the service URL and access your ML API:
 
 ```bash
-# Option 1: Port forwarding (recommended for testing)
-kubectl port-forward service/rust-ml-api-service 8080:80
+# Get the service URL
+minikube service rust-ml-api-service --url
 ```
 
-Now access your API at: `http://localhost:8080`
+The command will return a URL like `http://127.0.0.1:30081` - use this URL to access your API.
 
-```bash
-# Option 2: Minikube service (opens in browser)
-minikube service rust-ml-api-service
-```
+Alternatively, you can access it directly at: `http://localhost:30081` (if using the default NodePort).
 
 ## Optional: Horizontal Pod Autoscaler (HPA)
 
-To enable automatic scaling based on CPU usage:
+To enable automatic scaling based on CPU and memory usage:
 
 ### 1. Enable metrics server in Minikube
 
@@ -74,27 +69,20 @@ To enable automatic scaling based on CPU usage:
 minikube addons enable metrics-server
 ```
 
-### 2. Create HPA configuration
-
-Use the provided `hpa.yaml` file to create a Horizontal Pod Autoscaler.
-
-### 3. Apply HPA
+### 2. Apply HPA configuration
 
 ```bash
 kubectl apply -f hpa.yaml
 ```
 
-### 4. Monitor HPA
+### 3. Monitor HPA
 
 ```bash
 # Check HPA status
 kubectl get hpa rust-ml-api-hpa --watch
 
-# Generate load to test scaling (in another terminal)
-kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh
-
-# Inside the pod, run:
-while true; do wget -q -O- http://rust-ml-api-service/healthz; done
+# View pod resource usage
+kubectl top pods
 ```
 
 ## Testing the API
@@ -102,14 +90,18 @@ while true; do wget -q -O- http://rust-ml-api-service/healthz; done
 Once the service is running and accessible, you can test it:
 
 ```bash
-# Health check
-curl http://localhost:8080/healthz
+# Get service URL first
+minikube service rust-ml-api-service --url
 
-# Test MNIST digit prediction (28x28 pixel image as flattened array)
-curl -X POST http://localhost:8080/predict \
+# Use the returned URL for testing (replace <service-url> with actual URL)
+# Health check
+curl <service-url>/healthz
+
+# Test MNIST digit prediction (28x28 pixel image as flattened 784-element array)
+curl -X POST <service-url>/predict \
   -H "Content-Type: application/json" \
   -d '{
-    "image": [
+    "values": [
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -149,10 +141,11 @@ curl -X POST http://localhost:8080/predict \
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-      0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-      0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-      0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-      0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -170,6 +163,86 @@ curl -X POST http://localhost:8080/predict \
   }'
 ```
 
+### Example with a simple pattern (representing a digit)
+
+```bash
+# Test with a simple pattern representing a digit (28x28 = 784 values)
+curl -X POST <service-url>/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "values": [
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    ]
+  }'
+```
+
+## MNIST Data Format
+
+The API expects a 28x28 pixel image represented as a flattened array of 784 floating-point values (28 × 28 = 784). Each value should be between 0.0 (black/background) and 1.0 (white/foreground).
+
+### Understanding the Input Format
+
+- **Total values**: Exactly 784 numbers (28 × 28 pixels)
+- **Value range**: 0.0 to 1.0 (normalized pixel intensities)
+- **Array order**: Row-major order (left-to-right, top-to-bottom)
+- **Background**: 0.0 represents black/empty pixels
+- **Foreground**: 1.0 represents white/digit pixels
+
 ## Useful Commands
 
 ### Viewing logs
@@ -185,14 +258,17 @@ kubectl logs <pod-name>
 kubectl logs -f -l app=rust-ml-api
 ```
 
-### Health check status
+### Monitoring pod behavior
 
 ```bash
-# Check pod health status
-kubectl get pods -o wide
+# Watch pods scale in real-time
+kubectl get pods -l app=rust-ml-api --watch
 
-# Describe pods to see health check details
-kubectl describe pods -l app=rust-ml-api
+# Check HPA metrics
+kubectl describe hpa rust-ml-api-hpa
+
+# View pod resource usage
+kubectl top pods
 ```
 
 ### Scaling manually
@@ -203,6 +279,9 @@ kubectl scale deployment rust-ml-api --replicas=5
 
 # Check scaling status
 kubectl get deployments
+
+# Reset to 2 replicas
+kubectl scale deployment rust-ml-api --replicas=2
 ```
 
 ### Debugging
@@ -244,74 +323,127 @@ The deployment includes both **liveness** and **readiness** probes that use the 
 - **Liveness Probe**: Checks if the container is still running. If it fails, Kubernetes will restart the pod.
 - **Readiness Probe**: Checks if the container is ready to receive traffic. If it fails, the pod is removed from service endpoints.
 
-Both probes use your `/healthz` endpoint which returns "OK".
-
-## Load Testing
-
-To test how your API handles load and observe HPA in action:
-
-```bash
-# Generate load on health endpoint
-kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh
-# Inside the pod, run:
-while true; do wget -q -O- http://rust-ml-api-service/healthz; done
-
-# In another terminal, watch the scaling
-kubectl get hpa rust-ml-api-hpa --watch
-kubectl get pods --watch
-```
+Both probes use your `/healthz` endpoint which should return a successful HTTP response.
 
 ## Troubleshooting
 
-### Pod not starting?
+### API not accessible?
 
 ```bash
-kubectl describe pod <pod-name>
-kubectl logs <pod-name>
+# Check if pods are ready
+kubectl get pods -l app=rust-ml-api
+
+# Get the service URL
+minikube service rust-ml-api-service --url
+
+# Test health endpoint directly (replace <service-url> with actual URL)
+curl <service-url>/healthz
 ```
 
 ### Health checks failing?
 
 ```bash
-# Check if the /healthz endpoint is responding
-kubectl port-forward <pod-name> 3000:3000
-curl http://localhost:3000/healthz
+# Get service URL
+minikube service rust-ml-api-service --url
+
+# Check if the /healthz endpoint is responding (use actual URL)
+curl <service-url>/healthz
 
 # Check probe configuration
 kubectl describe pod <pod-name> | grep -A 10 "Liveness\|Readiness"
 ```
 
-### Service not accessible?
+### Prediction endpoint not working?
 
 ```bash
-# Check if service endpoints are ready
-kubectl get endpoints rust-ml-api-service
+# Verify the prediction endpoint is accessible
+curl -X POST <service-url>/predict \
+  -H "Content-Type: application/json" \
+  -d '{"values": [0.0, 0.0, 0.0]}'
 
-# Verify port forwarding
-kubectl port-forward service/rust-ml-api-service 8080:80 --address 0.0.0.0
+# Check if you're sending exactly 784 values
+# The array must contain exactly 28 * 28 = 784 floating-point numbers
+```
+
+### HPA not scaling?
+
+```bash
+# Check if metrics server is running
+kubectl get pods -n kube-system | grep metrics-server
+
+# Verify HPA can read metrics
+kubectl describe hpa rust-ml-api-hpa
+
+# Check pod resource usage
+kubectl top pods
+```
+
+### Service access issues?
+
+```bash
+# Check service configuration
+kubectl get services
+kubectl describe service rust-ml-api-service
+
+# Verify NodePort is working
+minikube service rust-ml-api-service --url
+
+# Alternative: Port forwarding method
+kubectl port-forward service/rust-ml-api-service 8080:80
+# Then access: http://localhost:8080
 ```
 
 ### Image pull issues?
 
 Make sure the Docker image is public on Docker Hub and the image name in `deployment.yaml` matches exactly.
 
+```bash
+# Test image pull manually
+docker pull elizaldecruzm/rust-ml-inference-api:latest
+
+# If building locally for Minikube
+eval $(minikube docker-env)
+docker build -t elizaldecruzm/rust-ml-inference-api:latest .
+```
+
 ## Architecture Overview
 
 - **Deployment**: Manages 2 replica pods running the Rust ML API with health checks
-- **Service**: Exposes the deployment internally within the cluster
+- **Service**: Exposes the deployment via NodePort for external access
 - **Health Probes**: Monitor application health using the `/healthz` endpoint
-- **HPA** (optional): Automatically scales pods based on CPU utilization
+- **HPA** (optional): Automatically scales pods based on CPU and memory utilization
 - **Minikube**: Provides the local Kubernetes cluster
 
 ## API Endpoints
 
-- `GET /healthz` - Health check endpoint (returns "OK")
-- `POST /predict` - MNIST digit prediction endpoint (expects 784-element array representing 28x28 pixel image)
+- `GET /healthz` - Health check endpoint (returns status confirmation)
+- `POST /predict` - MNIST digit prediction endpoint
+  - **Input**: JSON object with "values" field containing exactly 784 floating-point numbers
+  - **Format**: `{"values": [0.0, 0.1, 0.5, ..., 1.0]}` (784 total values)
+  - **Output**: Predicted digit (0-9) and confidence scores
+
+## Expected Response Format
+
+The `/predict` endpoint should return a JSON response similar to:
+
+```json
+{
+  "prediction": 7,
+  "confidence": 0.95,
+  "probabilities": [0.01, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.95, 0.01, 0.01]
+}
+```
 
 ## Next Steps
 
-- Modify the resource limits based on your application's needs
-- Experiment with different HPA metrics (memory, custom metrics)
-- Add monitoring with Prometheus and Grafana
-- Implement persistent storage if needed
-- Explore ingress controllers for more advanced routing
+- Modify the resource limits based on your ML model's memory requirements
+- Experiment with different HPA metrics and thresholds for ML workloads
+- Add persistent storage for model files if needed
+- Implement model versioning and A/B testing
+- Add monitoring with Prometheus and Grafana for ML metrics
+- Explore GPU support for more complex models
+- Try rolling updates with new model versions
+
+```
+
+```

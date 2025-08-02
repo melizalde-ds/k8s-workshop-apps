@@ -4,11 +4,9 @@ This guide will help you deploy a Next.js application with a real-time Kubernete
 
 ## Prerequisites
 
-```
 - [Docker](https://docs.docker.com/get-docker/) installed
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) installed
-```
 
 ## Quick Start
 
@@ -50,19 +48,16 @@ kubectl describe pods
 
 ### 5. Access the application
 
-Since we're using Minikube, expose the service:
+Get the service URL and access your dashboard:
 
 ```bash
-# Option 1: Port forwarding (recommended for testing)
-kubectl port-forward service/nextjs-k8s-service 8080:80
+# Get the service URL
+minikube service nextjs-k8s-service --url
 ```
 
-Now access your dashboard at: `http://localhost:8080`
+The command will return a URL like `http://127.0.0.1:30080` - click or copy this URL to access your dashboard.
 
-```bash
-# Option 2: Minikube service (opens in browser)
-minikube service nextjs-k8s-service
-```
+Alternatively, you can access it directly at: `http://localhost:30080` (if using the default NodePort).
 
 ## Optional: Horizontal Pod Autoscaler (HPA)
 
@@ -74,17 +69,13 @@ To enable automatic scaling based on CPU usage:
 minikube addons enable metrics-server
 ```
 
-### 2. Create HPA configuration
-
-Use the provided `hpa.yaml` file to create a Horizontal Pod Autoscaler.
-
-### 3. Apply HPA
+### 2. Apply HPA configuration
 
 ```bash
 kubectl apply -f hpa.yaml
 ```
 
-### 4. Monitor HPA and test scaling
+### 3. Monitor HPA and test scaling
 
 ```bash
 # Check HPA status
@@ -97,7 +88,7 @@ kubectl apply -f load-test.yaml
 kubectl get pods --watch
 ```
 
-### 5. Clean up load test
+### 4. Clean up load test
 
 ```bash
 kubectl delete pod load-generator
@@ -118,14 +109,18 @@ The application provides a real-time dashboard showing:
 ### Health Check
 
 ```bash
+# Get service URL first
+minikube service nextjs-k8s-service --url
+
+# Use the returned URL for testing (replace <service-url> with actual URL)
 # API health endpoint
-curl http://localhost:8080/api/health
+curl <service-url>/api/health
 
 # Pod info endpoint
-curl http://localhost:8080/api/info
+curl <service-url>/api/info
 
 # CPU-intensive endpoint (triggers HPA scaling)
-curl http://localhost:8080/api/cpu-work
+curl <service-url>/api/cpu-work
 ```
 
 ### Load Testing for HPA
@@ -238,20 +233,21 @@ Both probes use the `/api/health` endpoint which returns a JSON status.
 # Check if pods are ready
 kubectl get pods -l app=nextjs-k8s-app
 
-# Check service endpoints
-kubectl get endpoints nextjs-k8s-service
+# Get the service URL
+minikube service nextjs-k8s-service --url
 
-# Test direct pod access
-kubectl port-forward <pod-name> 3000:3000
-curl http://localhost:3000/api/health
+# Test health endpoint directly (replace <service-url> with actual URL)
+curl <service-url>/api/health
 ```
 
 ### Health checks failing?
 
 ```bash
-# Check if the /api/health endpoint is responding
-kubectl port-forward <pod-name> 3000:3000
-curl http://localhost:3000/api/health
+# Get service URL
+minikube service nextjs-k8s-service --url
+
+# Check if the /api/health endpoint is responding (use actual URL)
+curl <service-url>/api/health
 
 # Check probe configuration
 kubectl describe pod <pod-name> | grep -A 10 "Liveness\|Readiness"
@@ -270,14 +266,38 @@ kubectl describe hpa nextjs-k8s-hpa
 kubectl top pods
 ```
 
+### Service access issues?
+
+```bash
+# Check service configuration
+kubectl get services
+kubectl describe service nextjs-k8s-service
+
+# Verify NodePort is working
+minikube service nextjs-k8s-service --url
+
+# Alternative: Port forwarding method
+kubectl port-forward service/nextjs-k8s-service 8080:80
+# Then access: http://localhost:8080
+```
+
 ### Image pull issues?
 
 Make sure the Docker image is public on Docker Hub and the image name in `deployment.yaml` matches exactly.
 
+```bash
+# Test image pull manually
+docker pull elizaldecruzm/nextjs-k8s-workshop:latest
+
+# If building locally for Minikube
+eval $(minikube docker-env)
+docker build -t elizaldecruzm/nextjs-k8s-workshop:latest .
+```
+
 ## Architecture Overview
 
 - **Deployment**: Manages replica pods running the Next.js application with health checks
-- **Service**: Exposes the deployment internally within the cluster
+- **Service**: Exposes the deployment via NodePort for external access
 - **Health Probes**: Monitor application health using the `/api/health` endpoint
 - **HPA** (optional): Automatically scales pods based on CPU utilization
 - **Dashboard**: Real-time visualization of pod status and Kubernetes behavior
@@ -288,13 +308,14 @@ Make sure the Docker image is public on Docker Hub and the image name in `deploy
 - `GET /` - Main dashboard interface
 - `GET /api/health` - Health check endpoint (returns JSON status)
 - `GET /api/info` - Pod information (hostname, version, environment)
-- `GET /api/cpu-work` - CPU-intensive endpoint for load testing
+- `GET /api/load` - CPU-intensive endpoint for load testing
 
 ## Next Steps
 
 - Modify resource limits based on your needs
 - Experiment with different HPA metrics and thresholds
 - Add persistent storage for stateful applications
-- Explore ingress controllers for external access
-- Try rolling updates by changing the image version
+- Try different service types (ClusterIP, LoadBalancer)
 - Add monitoring with Prometheus and Grafana
+- Explore ingress controllers for more advanced routing
+- Try rolling updates by changing the image version
